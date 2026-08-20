@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us - SmallBizMart</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .user-menu { position: relative; }
+        .user-menu-toggle { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: white; text-decoration: none; padding: 0.5rem; border-radius: 4px; transition: background 0.3s; }
+        .user-menu-toggle:hover { background: rgba(255,255,255,0.1); }
+        .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--secondary-color); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
+        .user-dropdown { position: absolute; top: 100%; right: 0; background: white; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); min-width: 220px; display: none; z-index: 1000; margin-top: 0.5rem; overflow: hidden; }
+        .user-dropdown.show { display: block; }
+        .user-dropdown-header { padding: 1rem; border-bottom: 1px solid #eee; background: #f8f9fa; }
+        .user-dropdown-header h4 { color: var(--primary-color); font-size: 0.95rem; margin-bottom: 0.25rem; }
+        .user-dropdown-header p { color: #888; font-size: 0.8rem; }
+        .user-dropdown a { display: block; padding: 0.75rem 1rem; color: #555; text-decoration: none; transition: background 0.3s; font-size: 0.9rem; }
+        .user-dropdown a:hover { background: #f8f9fa; color: var(--secondary-color); }
+        .user-dropdown .divider { border-top: 1px solid #eee; margin: 0.25rem 0; }
+        .user-dropdown .logout { color: var(--accent-color); }
+        .nav-sell-link { display: none; }
+        .nav-sell-link.visible { display: list-item; }
+        @media (max-width: 768px) {
+            .user-dropdown { right: -50px; min-width: 200px; }
+            nav ul { flex-wrap: wrap; justify-content: center; }
+            nav ul li { margin: 0.25rem 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+    <!-- Mobile Header Bar -->
+    <div class="mobile-header-bar">
+        <div class="mobile-header-inner">
+            <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle navigation">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+            <a href="index.html" class="mobile-logo">Small<span>Biz</span>Mart</a>
+            <a href="login.html" class="mobile-login-btn" id="mobileLoginBtn">Sign In</a>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation Dropdown -->
+    <div class="mobile-nav-dropdown" id="mobileNavDropdown">
+        <div class="mobile-user-section" id="mobileUserSection" style="display:none;">
+            <div class="mobile-user-info">
+                <div class="mobile-user-avatar" id="mobileUserAvatar">U</div>
+                <div class="mobile-user-details">
+                    <h4 id="mobileUserName">User Name</h4>
+                    <p id="mobileUserEmail">user@email.com</p>
+                </div>
+            </div>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="about.html" class="active">About</a></li>
+                <li class="nav-sell-link" id="mobileNavSellLink" style="display:none;"><a href="seller-dashboard.html">Sell</a></li>
+                <li><a href="profile.html">👤 My Profile</a></li>
+                <li><a href="orders.html">📦 My Orders</a></li>
+                <li><a href="messages.html">💬 Messages</a></li>
+                <li><a href="cart.html" class="mobile-cart-link">
+                    <span>🛒 Shopping Cart</span>
+                    <span class="mobile-cart-badge" id="mobileCartCount">0</span>
+                </a></li>
+                <li id="mobileLogoutItem" style="display:none;"><a href="#" id="mobileLogoutLink" style="color: var(--accent-color);">🚪 Sign Out</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Mobile Nav Overlay -->
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+        <div class="container header-content">
+            <div class="logo">Small<span>Biz</span>Mart</div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="products.html">Products</a></li>
+                    <li><a href="about.html" class="active">About</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li class="nav-sell-link" id="navSellLink"><a href="seller-dashboard.html">Sell</a></li>
+                    <li class="user-menu" id="userMenu">
+                        <a href="#" class="user-menu-toggle" id="userMenuToggle">
+                            <span id="userMenuText">Account</span>
+                        </a>
+                        <div class="user-dropdown" id="userDropdown">
+                            <div class="user-dropdown-header">
+                                <h4 id="dropdownName">Guest</h4>
+                                <p id="dropdownEmail">Sign in to your account</p>
+                            </div>
+                            <a href="profile.html">👤 My Profile</a>
+                            <a href="orders.html">📦 My Orders</a>
+                            <a href="messages.html">💬 Messages</a>
+                        <a href="seller-dashboard.html" id="dropdownSellLink" style="display:none;">🏪 Seller Dashboard</a>
+                            <div class="divider"></div>
+                            <a href="login.html" id="dropdownLoginLink">🔑 Sign In</a>
+                            <a href="#" class="logout" id="dropdownLogoutLink" style="display:none;">🚪 Sign Out</a>
+                        </div>
+                    </li>
+                    <li class="cart-icon">
+                        <a href="cart.html">
+                            <span>Cart</span>
+                            <span class="cart-count" id="cartCount">0</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <h1>About SmallBizMart</h1>
+            <p>Empowering Nigerian small businesses through digital commerce</p>
+        </div>
+    </section>
+
+    <!-- Breadcrumb -->
+    <section class="breadcrumb">
+        <div class="container breadcrumb-content">
+            <a href="index.html">Home</a>
+            <span>></span>
+            <span>About Us</span>
+        </div>
+    </section>
+
+    <!-- About Content -->
+    <section class="container">
+        <div class="about-content">
+            <div class="about-image">
+                <img src="https://images.unsplash.com/photo-1556761175-b413da4baf72?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80" 
+                     alt="Small Business Team" style="width: 100%; border-radius: 8px;">
+            </div>
+            <div class="about-text">
+                <h2>Our Story</h2>
+                <p>SmallBizMart was founded in 2023 with a simple yet powerful mission: to provide Nigerian small businesses with accessible and affordable e-commerce solutions. We recognized the challenges faced by local entrepreneurs in reaching wider markets and competing in the digital economy.</p>
+                <p>Our platform is designed specifically for the unique needs of Nigerian small businesses, taking into account local payment preferences, logistical challenges, and the importance of building trust with customers.</p>
+                <p>We believe that every small business deserves the opportunity to thrive in the digital age, and we're committed to making that happen through innovative technology and dedicated support.</p>
+            </div>
+        </div>
+
+        <!-- Mission & Vision -->
+        <div class="mission-vision">
+            <div class="mission-box">
+                <h3>Our Mission</h3>
+                <p>To democratize e-commerce for Nigerian small businesses by providing affordable, user-friendly digital platforms that enable growth, increase market access, and foster economic development at the grassroots level.</p>
+            </div>
+            <div class="vision-box">
+                <h3>Our Vision</h3>
+                <p>To become the leading e-commerce enabler for small businesses in Nigeria, creating a vibrant digital marketplace that connects local entrepreneurs with customers nationwide and beyond.</p>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-number">500+</span>
+                <span class="stat-label">Small Businesses</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">10,000+</span>
+                <span class="stat-label">Products Listed</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">50,000+</span>
+                <span class="stat-label">Happy Customers</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">36</span>
+                <span class="stat-label">States Covered</span>
+            </div>
+        </div>
+
+        <!-- Values -->
+        <div class="about-text" style="margin-top: 3rem;">
+            <h2>Our Values</h2>
+            <div class="mission-vision">
+                <div class="mission-box">
+                    <h3>Empowerment</h3>
+                    <p>We empower small business owners with the tools and knowledge they need to succeed in the digital marketplace.</p>
+                </div>
+                <div class="vision-box">
+                    <h3>Innovation</h3>
+                    <p>We continuously innovate to provide solutions that address the unique challenges of the Nigerian market.</p>
+                </div>
+                <div class="mission-box">
+                    <h3>Community</h3>
+                    <p>We build strong communities where businesses can collaborate, share knowledge, and grow together.</p>
+                </div>
+                <div class="vision-box">
+                    <h3>Trust</h3>
+                    <p>We prioritize building trust between buyers and sellers through transparent processes and secure transactions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About Us</h3>
+                    <p>SmallBizMart is dedicated to helping Nigerian small businesses thrive in the digital economy.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="products.html">Products</a></li>
+                        <li><a href="about.html">About Us</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Customer Support</h3>
+                    <ul>
+                        <li><a href="#">FAQs</a></li>
+                        <li><a href="#">Shipping Policy</a></li>
+                        <li><a href="#">Returns & Refunds</a></li>
+                        <li><a href="contact.html">Contact Us</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Contact Info</h3>
+                    <ul>
+                        <li>Email: support@smallbizmart.com</li>
+                        <li>Phone: +234 813 474 4132</li>
+                        <li>Address: 3 Ezimora Street Awada, Anambra, Nigeria</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2025 SmallBizMart. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
+    <script src="nav.js"></script>
+
+    <!-- Mobile Navigation Script -->
+    <script>
+    (function() {
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const mobileNavDropdown = document.getElementById('mobileNavDropdown');
+        const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+        const mobileLoginBtn = document.getElementById('mobileLoginBtn');
+        const mobileUserSection = document.getElementById('mobileUserSection');
+        const mobileUserName = document.getElementById('mobileUserName');
+        const mobileUserEmail = document.getElementById('mobileUserEmail');
+        const mobileUserAvatar = document.getElementById('mobileUserAvatar');
+        const mobileLogoutItem = document.getElementById('mobileLogoutItem');
+        const mobileLogoutLink = document.getElementById('mobileLogoutLink');
+        const mobileNavSellLink = document.getElementById('mobileNavSellLink');
+        const mobileCartCount = document.getElementById('mobileCartCount');
+
+        let isNavOpen = false;
+
+        function toggleNav() {
+            isNavOpen = !isNavOpen;
+            hamburgerBtn.classList.toggle('active', isNavOpen);
+            mobileNavDropdown.classList.toggle('show', isNavOpen);
+            mobileNavOverlay.classList.toggle('show', isNavOpen);
+            document.body.classList.toggle('nav-open', isNavOpen);
+        }
+
+        function closeNav() {
+            isNavOpen = false;
+            hamburgerBtn.classList.remove('active');
+            mobileNavDropdown.classList.remove('show');
+            mobileNavOverlay.classList.remove('show');
+            document.body.classList.remove('nav-open');
+        }
+
+        hamburgerBtn.addEventListener('click', toggleNav);
+        mobileNavOverlay.addEventListener('click', closeNav);
+
+        mobileNavDropdown.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                if (this.getAttribute('href') !== '#' || this.id === 'mobileLogoutLink') {
+                    closeNav();
+                }
+            });
+        });
+
+        if (mobileLogoutLink) {
+            mobileLogoutLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                localStorage.removeItem('sbm_user');
+                showNotification('Logged out successfully', 'success');
+                setTimeout(() => window.location.href = 'index.html', 1000);
+            });
+        }
+
+        function updateMobileNav() {
+            const user = JSON.parse(localStorage.getItem('sbm_user') || '{}');
+            const cart = JSON.parse(localStorage.getItem('smallBizCart') || '[]');
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+            if (mobileCartCount) mobileCartCount.textContent = totalItems;
+
+            if (user && user.uid) {
+                if (mobileLoginBtn) {
+                    mobileLoginBtn.textContent = 'Account';
+                    mobileLoginBtn.href = 'profile.html';
+                }
+                if (mobileUserSection) mobileUserSection.style.display = 'block';
+                if (mobileUserName) mobileUserName.textContent = user.name || 'User';
+                if (mobileUserEmail) mobileUserEmail.textContent = user.email || '';
+                if (mobileUserAvatar) mobileUserAvatar.textContent = (user.name || 'U').charAt(0).toUpperCase();
+                if (mobileLogoutItem) mobileLogoutItem.style.display = 'list-item';
+
+                if (user.role === 'seller') {
+                    if (mobileNavSellLink) mobileNavSellLink.style.display = 'list-item';
+                } else {
+                    if (mobileNavSellLink) mobileNavSellLink.style.display = 'none';
+                }
+            } else {
+                if (mobileLoginBtn) {
+                    mobileLoginBtn.textContent = 'Sign In';
+                    mobileLoginBtn.href = 'login.html';
+                }
+                if (mobileUserSection) mobileUserSection.style.display = 'none';
+                if (mobileLogoutItem) mobileLogoutItem.style.display = 'none';
+                if (mobileNavSellLink) mobileNavSellLink.style.display = 'none';
+            }
+        }
+
+        window.addEventListener('storage', updateMobileNav);
+        updateMobileNav();
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && isNavOpen) {
+                closeNav();
+            }
+        });
+
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768 && isNavOpen) {
+                closeNav();
+            }
+        });
+    })();
+    </script>
+</body>
+</html>
