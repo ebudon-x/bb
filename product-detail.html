@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Detail - SmallBizMart</title>
     <link rel="stylesheet" href="style.css">
-    <style>
+    <style> 
         .user-menu { position: relative; }
         .user-menu-toggle { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: white; text-decoration: none; padding: 0.5rem; border-radius: 4px; transition: background 0.3s; }
         .user-menu-toggle:hover { background: rgba(255,255,255,0.1); }
@@ -390,7 +390,7 @@
             padding: 0.5rem 1rem;
             font-style: italic;
         }
-        @media (max-width: 768px) {
+         {
             .product-detail-layout {
                 grid-template-columns: 1fr;
             }
@@ -466,11 +466,16 @@
             }
             /* Chat widget mobile fixes */
             .chat-box {
-                width: calc(100vw - 20px);
-                right: 10px;
+                position: fixed;
                 left: 10px;
+                right: 10px;
+                bottom: 90px;
+                width: auto;
                 height: 60vh;
-                bottom: 80px;
+                z-index: 1001;
+            }
+            .chat-widget {
+                z-index: 1000;
             }
             .chat-input-area {
                 padding: 0.75rem;
@@ -896,6 +901,54 @@
         });
     })();
     </script>
+        <!-- Draggable Chat Script -->
+    <script>
+    (function() {
+        const chatBox = document.getElementById('chatBox');
+        const chatHeader = chatBox.querySelector('.chat-header');
+        if (!chatHeader) return;
 
+        let isDragging = false, startX, startY, initialLeft, initialTop;
+
+        chatHeader.style.cursor = 'move';
+
+        function startDrag(e) {
+            isDragging = true;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            startX = clientX;
+            startY = clientY;
+            const rect = chatBox.getBoundingClientRect();
+            initialLeft = rect.left;
+            initialTop = rect.top;
+            chatBox.style.transition = 'none';
+            chatBox.style.right = 'auto';
+            chatBox.style.bottom = 'auto';
+        }
+
+        function doDrag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+            chatBox.style.left = Math.max(0, Math.min(window.innerWidth - chatBox.offsetWidth, initialLeft + dx)) + 'px';
+            chatBox.style.top = Math.max(0, Math.min(window.innerHeight - chatBox.offsetHeight, initialTop + dy)) + 'px';
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            chatBox.style.transition = '';
+        }
+
+        chatHeader.addEventListener('mousedown', startDrag);
+        chatHeader.addEventListener('touchstart', startDrag, {passive: false});
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('touchmove', doDrag, {passive: false});
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchend', stopDrag);
+    })();
+    </script>
 </body>
 </html>
