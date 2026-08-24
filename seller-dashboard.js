@@ -11,7 +11,7 @@ import {
     getDoc,
     updateDoc,
     deleteDoc,
-    addDoc,
+    addDoc, 
     serverTimestamp,
     getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -152,7 +152,7 @@ async function loadProducts(sellerId) {
                 return;
             }
 
-            let html = '<table class="data-table"><thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+            let html = '<table class="data-table" style="table-layout:auto;"><thead><tr><th style="min-width:180px;">Product</th><th>Price</th><th>Stock</th><th>Status</th><th style="min-width:120px;">Actions</th></tr></thead><tbody>';
             snapshot.forEach(doc => {
                 const p = doc.data();
                 let imgSrc = p.image || 'image/placeholder.jpg';
@@ -162,11 +162,11 @@ async function loadProducts(sellerId) {
 
                 html += `
                     <tr>
-                        <td>
-                            <img src="${imgSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:0.5rem;" onerror="this.src='image/placeholder.jpg'">
-                            ${p.name}
+                        <td style="white-space:normal;word-wrap:break-word;">
+                            <img src="${imgSrc}" style="width:50px;height:50px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:0.5rem;" onerror="this.src='image/placeholder.jpg'">
+                            <span style="vertical-align:middle;">${p.name}</span>
                         </td>
-                        <td>N${p.price?.toLocaleString() || '0'}</td>
+                        <td>₦${p.price?.toLocaleString() || '0'}</td>
                         <td>${p.stock || 0}</td>
                         <td><span class="status-badge ${p.stock > 0 ? 'status-delivered' : 'status-cancelled'}">${p.stock > 0 ? 'Active' : 'Out of Stock'}</span></td>
                         <td>
