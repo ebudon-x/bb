@@ -16,7 +16,7 @@ import {
     getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
-    getDatabase,
+    getDatabase, 
     ref,
     onValue,
     onChildAdded,
@@ -482,7 +482,9 @@ function openChat(chatId, customerName, buyerId) {
     }
 
     chatModal.style.display = 'flex';
-    document.getElementById('chatModalTitle').textContent = customerName || 'Customer';
+    const chatMeta = (await get(ref(rtdb, 'chats/' + chatId + '/meta'))).val();
+    const displayName = chatMeta?.buyerName || customerName || 'Customer';
+    document.getElementById('chatModalTitle').textContent = displayName;
     document.getElementById('chatModalAvatar').textContent = (customerName || 'C').charAt(0).toUpperCase();
 
     // ===== FIXED: Listen to buyer's online status =====
