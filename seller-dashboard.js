@@ -323,14 +323,17 @@ async function loadMessages(sellerId) {
                 const lastMsg = chat.lastMessage || {};
                 const isUnread = !lastMsg.read && lastMsg.senderId !== sellerId;
                 const time = lastMsg.timestamp ? new Date(lastMsg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+                
+                // ALWAYS show the BUYER's name, never the last sender's name
+                const buyerName = chat.meta?.buyerName || lastMsg.senderName || 'Customer';
 
                 const preview = document.createElement('div');
                 preview.className = 'chat-preview' + (isUnread ? ' unread' : '');
-                preview.onclick = () => openChat(chat.id, lastMsg.senderName || 'Customer', lastMsg.senderId);
+                preview.onclick = () => openChat(chat.id, buyerName, chat.meta?.buyerId || lastMsg.senderId);
                 preview.innerHTML = `
-                    <div class="chat-avatar">${(lastMsg.senderName || 'U').charAt(0).toUpperCase()}</div>
+                    <div class="chat-avatar">${(buyerName || 'U').charAt(0).toUpperCase()}</div>
                     <div class="chat-info">
-                        <h5>${lastMsg.senderName || 'Customer'}</h5>
+                        <h5>${buyerName}</h5>
                         <p>${lastMsg.text || 'No messages yet'}</p>
                     </div>
                     <div class="chat-meta">
@@ -345,7 +348,6 @@ async function loadMessages(sellerId) {
         console.error('Messages error:', error);
     }
 }
-
 // Load analytics
 async function loadAnalytics(sellerId) {
     const analyticsDiv = document.getElementById('analytics');
