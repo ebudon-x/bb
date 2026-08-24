@@ -19,7 +19,7 @@ import {
     query,
     where,
     getDocs,
-    updateDoc
+    updateDoc 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { firebaseConfig } from './firebase-config.js';
@@ -328,7 +328,14 @@ function initChat() {
 
     const ids = [currentUser.uid, sellerId].sort();
     chatRoomId = 'chat_' + ids.join('_') + '_product_' + productId;
-
+    // Store metadata so both sides always know each other's names
+    await set(ref(db, 'chats/' + chatRoomId + '/meta'), {
+        buyerId: currentUser.uid,
+        buyerName: currentUser.name,
+        sellerId: sellerId,
+        sellerName: document.getElementById('sellerName').textContent,
+        productId: productId
+    });
     chatMessages.innerHTML = `
         <div class="chat-message received">
             <div class="msg-bubble">Hello! How can I help you with this product today?</div>
