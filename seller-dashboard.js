@@ -8,7 +8,7 @@ import {
     orderBy,
     onSnapshot,
     doc,
-    getDoc,
+    getDoc, 
     updateDoc,
     deleteDoc,
     addDoc, 
