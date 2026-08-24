@@ -340,6 +340,26 @@
             }
         }
     </style>
+    <style>
+        /* Chat Modal Mobile Fix */
+        @media (max-width: 768px) {
+            #sellerChatModal > div {
+                width: 95% !important;
+                height: 90vh !important;
+                flex-direction: column !important;
+                border-radius: 8px !important;
+            }
+            #chatModalSidebar {
+                width: 100% !important;
+                max-height: 35% !important;
+                border-right: none !important;
+                border-bottom: 1px solid #eee !important;
+            }
+            #chatModalMessages {
+                padding: 1rem !important;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Header - FIXED: Removed cart icon for sellers -->
