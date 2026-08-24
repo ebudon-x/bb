@@ -323,7 +323,7 @@ document.getElementById('chatSellerBtn').addEventListener('click', () => {
     initChat();
 });
 
-function initChat() {
+async function initChat(){
     if (!currentUser || !sellerId || !productId) return;
 
     const ids = [currentUser.uid, sellerId].sort();
