@@ -110,25 +110,7 @@
             padding-bottom: 0.75rem;
             border-bottom: 2px solid #eee;
         }
-        .info-item {
-            padding: 1rem;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 0.75rem;
-        }
-        .info-item:last-child {
-            margin-bottom: 0;
-        }
-        .info-item label {
-            display: block;
-            color: #888;
-            font-size: 0.85rem;
-            margin-bottom: 0.25rem;
-        }
-        .info-item p {
-            color: var(--primary-color);
-            font-weight: 500;
-        }
+
         .saved-items-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -333,19 +315,19 @@
                 <div class="tab-panel active" id="profile">
                     <h2>Profile Information</h2>
                     <div class="info-list" style="margin-bottom:1.5rem;">
-                        <div class="info-item" style="padding:1rem;background:#f8f9fa;border-radius:8px;">
+                        <div class="info-item" style="padding:0.75rem 0;border-bottom:1px solid #eee;">
                             <label style="display:block;color:#888;font-size:0.85rem;margin-bottom:0.25rem;">Full Name</label>
                             <p id="infoName" style="color:var(--primary-color);font-weight:500;">Loading...</p>
                         </div>
-                        <div class="info-item" style="padding:1rem;background:#f8f9fa;border-radius:8px;">
+                        <div class="info-item" style="padding:0.75rem 0;border-bottom:1px solid #eee;">
                             <label style="display:block;color:#888;font-size:0.85rem;margin-bottom:0.25rem;">Email</label>
                             <p id="infoEmail" style="color:var(--primary-color);font-weight:500;">Loading...</p>
                         </div>
-                        <div class="info-item" style="padding:1rem;background:#f8f9fa;border-radius:8px;">
+                        <div class="info-item" style="padding:0.75rem 0;border-bottom:1px solid #eee;">
                             <label style="display:block;color:#888;font-size:0.85rem;margin-bottom:0.25rem;">Phone</label>
                             <p id="infoPhone" style="color:var(--primary-color);font-weight:500;">Loading...</p>
                         </div>
-                        <div class="info-item" style="padding:1rem;background:#f8f9fa;border-radius:8px;">
+                        <div class="info-item" style="padding:0.75rem 0;">
                             <label style="display:block;color:#888;font-size:0.85rem;margin-bottom:0.25rem;">Member Since</label>
                             <p id="infoJoined" style="color:var(--primary-color);font-weight:500;">July 2025</p>
                         </div>
