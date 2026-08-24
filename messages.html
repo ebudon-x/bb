@@ -476,8 +476,8 @@
                             ? new Date(lastMsg.timestamp).toLocaleDateString() 
                             : '';
 
-                        // Extract seller name from chat ID or last message
-                        const sellerName = lastMsg.senderName || 'Seller';
+                    // Always show the SELLER's name, not the last sender's name
+                    const sellerName = chat.meta?.sellerName || lastMsg.senderName || 'Seller';
 
                         const div = document.createElement('div');
                         div.className = 'chat-item' + (isUnread ? ' unread' : '');
