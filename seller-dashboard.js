@@ -21,7 +21,7 @@ import {
     onValue,
     onChildAdded,
     set,
-    off,
+    off, 
     push,
     update
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -596,7 +596,11 @@ window.sendSellerReply = async function() {
         timestamp: Date.now(),
         read: false
     });
-
+        // Ensure seller name is stored in meta
+    await update(ref(rtdb, 'chats/' + chatId), {
+        'meta/sellerId': currentSellerId,
+        'meta/sellerName': currentUser?.displayName || 'Seller'
+    });
     input.value = '';
 };
 
