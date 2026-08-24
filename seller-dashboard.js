@@ -484,7 +484,8 @@ function openChat(chatId, customerName, buyerId) {
     }
 
     chatModal.style.display = 'flex';
-    const chatMeta = (await get(ref(rtdb, 'chats/' + chatId + '/meta'))).val();
+    const chatMetaSnap = await get(ref(rtdb, 'chats/' + chatId + '/meta'));
+    const chatMeta = chatMetaSnap.val();
     const displayName = chatMeta?.buyerName || customerName || 'Customer';
     document.getElementById('chatModalTitle').textContent = displayName;
     document.getElementById('chatModalAvatar').textContent = (customerName || 'C').charAt(0).toUpperCase();
