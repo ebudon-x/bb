@@ -449,36 +449,26 @@ function openChat(chatId, customerName, buyerId) {
         return;
     }
 
-    // DESKTOP: keep existing modal behavior (unchanged)
+    // DESKTOP: modal without sidebar (chat only)
     let chatModal = document.getElementById('sellerChatModal');
     if (!chatModal) {
         chatModal = document.createElement('div');
         chatModal.id = 'sellerChatModal';
         chatModal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;';
         chatModal.innerHTML = `
-            <div style="background:white;width:90%;max-width:800px;height:85vh;border-radius:8px;display:flex;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-                <div style="width:280px;border-right:1px solid #eee;display:flex;flex-direction:column;background:#f8f9fa;">
-                    <div style="padding:1rem;border-bottom:1px solid #eee;">
-                        <h4 style="color:var(--primary-color);margin:0;">Conversations</h4>
+            <div style="background:white;width:90%;max-width:600px;height:85vh;border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                <div style="padding:1rem;background:#f8f9fa;border-bottom:1px solid #eee;display:flex;align-items:center;gap:1rem;">
+                    <div id="chatModalAvatar" style="width:40px;height:40px;border-radius:50%;background:#3498db;color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;">C</div>
+                    <div style="flex:1;">
+                        <h4 id="chatModalTitle" style="margin:0;color:var(--primary-color);">Chat</h4>
+                        <span id="chatModalOnline" style="font-size:0.8rem;color:#27ae60;">🟢 Online</span>
                     </div>
-                    <div id="chatModalSidebar" style="flex:1;overflow-y:auto;">
-                        <p style="text-align:center;color:#888;padding:1rem;">Loading...</p>
-                    </div>
+                    <button onclick="closeChatModal()" style="background:none;border:none;color:#888;font-size:1.5rem;cursor:pointer;">&times;</button>
                 </div>
-                <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-                    <div style="padding:1rem;background:#f8f9fa;border-bottom:1px solid #eee;display:flex;align-items:center;gap:1rem;">
-                        <div id="chatModalAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--secondary-color);color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;">C</div>
-                        <div style="flex:1;">
-                            <h4 id="chatModalTitle" style="margin:0;color:var(--primary-color);">Chat</h4>
-                            <span id="chatModalOnline" style="font-size:0.8rem;color:#27ae60;">🟢 Online</span>
-                        </div>
-                        <button onclick="closeChatModal()" style="background:none;border:none;color:#888;font-size:1.5rem;cursor:pointer;">&times;</button>
-                    </div>
-                    <div id="chatModalMessages" style="flex:1;overflow-y:auto;padding:1.5rem;background:#fafafa;display:flex;flex-direction:column;gap:1rem;"></div>
-                    <div style="padding:1rem;border-top:1px solid #eee;display:flex;gap:0.5rem;background:white;">
-                        <input type="text" id="chatModalInput" placeholder="Type your reply..." style="flex:1;padding:0.75rem;border:1px solid #ddd;border-radius:20px;outline:none;" onkeypress="if(event.key==='Enter') sendSellerReply()">
-                        <button onclick="sendSellerReply()" style="padding:0.75rem 1.5rem;background:var(--secondary-color);color:white;border:none;border-radius:20px;cursor:pointer;font-weight:600;">Send</button>
-                    </div>
+                <div id="chatModalMessages" style="flex:1;overflow-y:auto;padding:1.5rem;background:#fafafa;display:flex;flex-direction:column;gap:1rem;"></div>
+                <div style="padding:1rem;border-top:1px solid #eee;display:flex;gap:0.5rem;background:white;">
+                    <input type="text" id="chatModalInput" placeholder="Type your reply..." style="flex:1;padding:0.75rem;border:1px solid #ddd;border-radius:20px;outline:none;" onkeypress="if(event.key==='Enter') sendSellerReply()">
+                    <button onclick="sendSellerReply()" style="padding:0.75rem 1.5rem;background:#3498db;color:white;border:none;border-radius:20px;cursor:pointer;font-weight:600;">Send</button>
                 </div>
             </div>
         `;
@@ -579,9 +569,9 @@ function openMobileInlineChat(chatId, customerName, buyerId) {
                 <button class="mobile-inline-close" onclick="closeMobileInlineChat()">✕</button>
             </div>
             <div id="mobileChatMessages" class="mobile-inline-messages"></div>
-            <div class="mobile-inline-input" style="padding:0.75rem;border-top:1px solid #eee;display:flex;gap:0.5rem;background:white;">
-                <input type="text" id="mobileChatInput" placeholder="Type your reply..." onkeypress="if(event.key==='Enter') sendMobileReply()" style="flex:1;padding:0.6rem 1rem;border:1px solid #ddd;border-radius:20px;outline:none;font-size:0.95rem;min-width:0;">
-                <button onclick="sendMobileReply()" style="padding:0.6rem 1.2rem;background:var(--secondary-color);color:white;border:none;border-radius:20px;cursor:pointer;font-weight:600;font-size:0.9rem;white-space:nowrap;">Send</button>
+            <div class="mobile-inline-input">
+                <input type="text" id="mobileChatInput" placeholder="Type your reply..." onkeypress="if(event.key==='Enter') sendMobileReply()">
+                <button onclick="sendMobileReply()">Send</button>
             </div>
         </div>
     `;
