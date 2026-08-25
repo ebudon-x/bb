@@ -579,9 +579,9 @@ function openMobileInlineChat(chatId, customerName, buyerId) {
                 <button class="mobile-inline-close" onclick="closeMobileInlineChat()">✕</button>
             </div>
             <div id="mobileChatMessages" class="mobile-inline-messages"></div>
-            <div class="mobile-inline-input">
-                <input type="text" id="mobileChatInput" placeholder="Type your reply..." onkeypress="if(event.key==='Enter') sendMobileReply()">
-                <button onclick="sendMobileReply()">Send</button>
+            <div class="mobile-inline-input" style="padding:0.75rem;border-top:1px solid #eee;display:flex;gap:0.5rem;background:white;">
+                <input type="text" id="mobileChatInput" placeholder="Type your reply..." onkeypress="if(event.key==='Enter') sendMobileReply()" style="flex:1;padding:0.6rem 1rem;border:1px solid #ddd;border-radius:20px;outline:none;font-size:0.95rem;min-width:0;">
+                <button onclick="sendMobileReply()" style="padding:0.6rem 1.2rem;background:var(--secondary-color);color:white;border:none;border-radius:20px;cursor:pointer;font-weight:600;font-size:0.9rem;white-space:nowrap;">Send</button>
             </div>
         </div>
     `;
