@@ -22,7 +22,8 @@ import {
     onChildAdded,
     set,
     push,
-    update
+    update,
+    get
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { firebaseConfig } from './firebase-config.js';
@@ -269,6 +270,7 @@ async function loadOrders(sellerId) {
 }
 
 // Load messages - shows NUMBER count, no icons
+// Load messages - shows OTHER person's name, not your own
 async function loadMessages(sellerId) {
     const messagesList = document.getElementById('messagesList');
     const msgBadge = document.getElementById('msgBadge');
@@ -320,17 +322,45 @@ async function loadMessages(sellerId) {
             messagesList.innerHTML = '';
             chats.forEach(chat => {
                 const lastMsg = chat.lastMessage || {};
+                
+                // ===== FIX: Get the OTHER person's name, not whoever sent last =====
+                // Chat ID format: buyerId_sellerId or sellerId_buyerId
+                const ids = chat.id.split('_');
+                const buyerId = ids.find(id => id !== sellerId) || '';
+                
+                // Get buyer name from participants, messages, or lastMessage
+                let buyerName = 'Customer';
+                let buyerDisplayName = 'Customer';
+                
+                if (chat.participants && chat.participants[buyerId]) {
+                    buyerName = chat.participants[buyerId].name || 'Customer';
+                } else if (lastMsg.senderId !== sellerId && lastMsg.senderName) {
+                    buyerName = lastMsg.senderName;
+                } else {
+                    // Look through messages to find buyer's name
+                    const msgs = chat.messages || {};
+                    for (const key in msgs) {
+                        if (msgs[key].senderId === buyerId && msgs[key].senderName) {
+                            buyerName = msgs[key].senderName;
+                            break;
+                        }
+                    }
+                }
+                buyerDisplayName = buyerName;
+                // ============================================
+
                 const isUnread = !lastMsg.read && lastMsg.senderId !== sellerId;
                 const time = lastMsg.timestamp ? new Date(lastMsg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
 
                 const preview = document.createElement('div');
                 preview.className = 'chat-preview' + (isUnread ? ' unread' : '');
                 preview.setAttribute('data-chat-id', chat.id);
-                preview.onclick = () => openChat(chat.id, lastMsg.senderName || 'Customer', lastMsg.senderId);
+                preview.setAttribute('data-buyer-id', buyerId);
+                preview.onclick = () => openChat(chat.id, buyerDisplayName, buyerId);
                 preview.innerHTML = `
-                    <div class="chat-avatar">${(lastMsg.senderName || 'U').charAt(0).toUpperCase()}</div>
+                    <div class="chat-avatar">${buyerDisplayName.charAt(0).toUpperCase()}</div>
                     <div class="chat-info">
-                        <h5>${lastMsg.senderName || 'Customer'}</h5>
+                        <h5>${buyerDisplayName}</h5>
                         <p>${lastMsg.text || 'No messages yet'}</p>
                     </div>
                     <div class="chat-meta">
@@ -463,7 +493,8 @@ function openChat(chatId, customerName, buyerId) {
                         <h4 id="chatModalTitle" style="margin:0;color:var(--primary-color);">Chat</h4>
                         <span id="chatModalOnline" style="font-size:0.8rem;color:#27ae60;">🟢 Online</span>
                     </div>
-                    <button onclick="closeChatModal()" style="background:none;border:none;color:#888;font-size:1.5rem;cursor:pointer;">&times;</button>
+                <button onclick="deleteChat('${chatId}')" style="background:none;border:none;color:#e74c3c;font-size:1rem;cursor:pointer;padding:0.25rem 0.5rem;margin-right:0.5rem;" title="Delete Chat">🗑️</button>
+                <button onclick="closeChatModal()" style="background:none;border:none;color:#888;font-size:1.5rem;cursor:pointer;">&times;</button>
                 </div>
                 <div id="chatModalMessages" style="flex:1;overflow-y:auto;padding:1.5rem;background:#fafafa;display:flex;flex-direction:column;gap:1rem;"></div>
                 <div style="padding:1rem;border-top:1px solid #eee;display:flex;gap:0.5rem;background:white;">
@@ -512,14 +543,23 @@ function openChat(chatId, customerName, buyerId) {
         }
         const msg = snapshot.val();
         const isOwn = msg.senderId === currentSellerId;
-        const div = document.createElement('div');
-        div.style.cssText = 'max-width:70%;padding:0.75rem 1rem;border-radius:12px;font-size:0.95rem;line-height:1.4;word-wrap:break-word;' + 
+                const div = document.createElement('div');
+        div.style.cssText = 'max-width:70%;padding:0.75rem 1rem;border-radius:12px;font-size:0.95rem;line-height:1.4;word-wrap:break-word;cursor:' + (isOwn ? 'pointer' : 'default') + ';' + 
             (isOwn 
-                ? 'background:var(--secondary-color);color:white;margin-left:auto;border-bottom-right-radius:4px;' 
+                ? 'background:#3498db;color:white;margin-left:auto;border-bottom-right-radius:4px;' 
                 : 'background:white;border:1px solid #e0e0e0;color:#333;border-bottom-left-radius:4px;');
+        
+        // Add context menu for own messages
+        if (isOwn) {
+            div.addEventListener('click', function(e) {
+                showMessageMenu(chatId, snapshot.key, msg.text, e);
+            });
+        }
+        
         const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+        const editedMark = msg.edited ? ' <span style="font-size:0.7rem;opacity:0.6;">(edited)</span>' : '';
         div.innerHTML = `
-            <div>${escapeHtml(msg.text)}</div>
+            <div>${escapeHtml(msg.text)}${editedMark}</div>
             <div style="font-size:0.7rem;opacity:0.7;margin-top:0.25rem;text-align:${isOwn ? 'right' : 'left'};">
                 ${time} ${isOwn ? '• You' : '• ' + (msg.senderName || 'Customer')}
             </div>
@@ -566,12 +606,15 @@ function openMobileInlineChat(chatId, customerName, buyerId) {
                         <span id="mobileChatOnline">🟢 Online</span>
                     </div>
                 </div>
-                <button class="mobile-inline-close" onclick="closeMobileInlineChat()">✕</button>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <button onclick="deleteChat('${chatId}')" style="background:none;border:none;color:#e74c3c;font-size:0.85rem;cursor:pointer;padding:0.25rem 0.5rem;">🗑️</button>
+                    <button class="mobile-inline-close" onclick="closeMobileInlineChat()" style="background:none;border:none;color:#888;font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
+                </div>
             </div>
             <div id="mobileChatMessages" class="mobile-inline-messages"></div>
-            <div class="mobile-inline-input">
-                <input type="text" id="mobileChatInput" placeholder="Type your reply..." onkeypress="if(event.key==='Enter') sendMobileReply()">
-                <button onclick="sendMobileReply()">Send</button>
+            <div class="mobile-inline-input" style="padding:0.75rem;border-top:1px solid #eee;display:flex;gap:0.5rem;background:white;">
+                <input type="text" id="mobileChatInput" placeholder="Type your reply..." onkeypress="if(event.key==='Enter') sendMobileReply()" style="flex:1;padding:0.6rem 1rem;border:1px solid #ddd;border-radius:20px;outline:none;font-size:0.95rem;min-width:0;">
+                <button onclick="sendMobileReply()" style="padding:0.6rem 1.2rem;background:#3498db;color:white;border:none;border-radius:20px;cursor:pointer;font-weight:600;font-size:0.9rem;white-space:nowrap;">Send</button>
             </div>
         </div>
     `;
@@ -619,12 +662,36 @@ function openMobileInlineChat(chatId, customerName, buyerId) {
 
         const msg = snapshot.val();
         const isOwn = msg.senderId === currentSellerId;
+        const msgKey = snapshot.key;
 
         const div = document.createElement('div');
         div.className = 'mobile-inline-bubble ' + (isOwn ? 'sent' : 'received');
+        
+        // Add context menu for own messages
+        if (isOwn) {
+            div.style.cursor = 'pointer';
+            div.setAttribute('data-msg-key', msgKey);
+            div.setAttribute('data-msg-text', msg.text);
+            div.setAttribute('data-chat-id', chatId);
+            div.addEventListener('click', function(e) {
+                showMessageMenu(chatId, msgKey, msg.text, e);
+            });
+            // Long press for mobile
+            let pressTimer;
+            div.addEventListener('touchstart', function(e) {
+                pressTimer = setTimeout(() => {
+                    showMessageMenu(chatId, msgKey, msg.text, e.touches[0]);
+                }, 500);
+            });
+            div.addEventListener('touchend', function() {
+                clearTimeout(pressTimer);
+            });
+        }
+        
         const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+        const editedMark = msg.edited ? ' <span style="font-size:0.7rem;opacity:0.6;">(edited)</span>' : '';
         div.innerHTML = `
-            <div>${escapeHtml(msg.text)}</div>
+            <div>${escapeHtml(msg.text)}${editedMark}</div>
             <span class="mobile-inline-time">${time} • ${isOwn ? 'You' : (msg.senderName || 'Customer')}</span>
         `;
         container.appendChild(div);
@@ -639,7 +706,6 @@ function openMobileInlineChat(chatId, customerName, buyerId) {
 
     update(ref(rtdb, 'chats/' + chatId + '/lastMessage'), { read: true }).catch(() => {});
 
-    // Scroll the inline chat into view
     setTimeout(() => {
         inlineChat.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
@@ -666,7 +732,21 @@ window.sendMobileReply = async function() {
     const text = input.value.trim();
     const chatId = activeChatId;
     if (!text || !chatId || !currentSellerId) return;
-
+    
+    // Check if we're editing
+    const isEditing = input.getAttribute('data-editing') === 'true';
+    const editKey = input.getAttribute('data-edit-key');
+    
+    if (isEditing && editKey) {
+        await saveEditedMessage(chatId, editKey, text);
+        input.value = '';
+        input.removeAttribute('data-editing');
+        input.removeAttribute('data-edit-key');
+        input.placeholder = 'Type your reply...';
+        return;
+    }
+    
+    // Normal send
     await push(ref(rtdb, 'chats/' + chatId + '/messages'), {
         text: text,
         senderId: currentSellerId,
@@ -710,6 +790,19 @@ window.sendSellerReply = async function() {
     const text = input.value.trim();
     const chatId = activeChatId;
     if (!text || !chatId || !currentSellerId) return;
+    
+    // Check if we're editing
+    const isEditing = input.getAttribute('data-editing') === 'true';
+    const editKey = input.getAttribute('data-edit-key');
+    
+    if (isEditing && editKey) {
+        await saveEditedMessage(chatId, editKey, text);
+        input.value = '';
+        input.removeAttribute('data-editing');
+        input.removeAttribute('data-edit-key');
+        input.placeholder = 'Type your reply...';
+        return;
+    }
 
     await push(ref(rtdb, 'chats/' + chatId + '/messages'), {
         text: text,
@@ -766,6 +859,137 @@ window.addEventListener('beforeunload', () => {
         });
     }
 });
+
+// ===== DELETE CHAT =====
+window.deleteChat = async function(chatId) {
+    if (!confirm('Delete this entire conversation? This cannot be undone.')) return;
+    
+    try {
+        // Remove from Realtime Database
+        await set(ref(rtdb, 'chats/' + chatId), null);
+        
+        // Close modal if open
+        closeChatModal();
+        closeMobileInlineChat();
+        
+        showNotification('Chat deleted', 'success');
+    } catch (error) {
+        console.error('Delete chat error:', error);
+        showNotification('Failed to delete chat', 'error');
+    }
+};
+
+// ===== DELETE SINGLE MESSAGE =====
+window.deleteMessage = async function(chatId, messageKey) {
+    if (!confirm('Delete this message?')) return;
+    
+    try {
+        await set(ref(rtdb, 'chats/' + chatId + '/messages/' + messageKey), null);
+        showNotification('Message deleted', 'success');
+    } catch (error) {
+        console.error('Delete message error:', error);
+        showNotification('Failed to delete message', 'error');
+    }
+};
+
+// ===== EDIT MESSAGE =====
+let editingMessageKey = null;
+let editingMessageChatId = null;
+
+window.editMessage = function(chatId, messageKey, currentText) {
+    editingMessageKey = messageKey;
+    editingMessageChatId = chatId;
+    
+    // Use the appropriate input based on mobile or desktop
+    const mobileInput = document.getElementById('mobileChatInput');
+    const desktopInput = document.getElementById('chatModalInput');
+    const input = mobileInput || desktopInput;
+    
+    if (input) {
+        input.value = currentText;
+        input.focus();
+        input.setAttribute('data-editing', 'true');
+        input.setAttribute('data-edit-key', messageKey);
+        input.setAttribute('data-edit-chat', chatId);
+        input.placeholder = 'Editing message...';
+    }
+};
+
+window.saveEditedMessage = async function(chatId, messageKey, newText) {
+    if (!newText.trim()) return;
+    
+    try {
+        await update(ref(rtdb, 'chats/' + chatId + '/messages/' + messageKey), {
+            text: newText.trim(),
+            edited: true,
+            editedAt: Date.now()
+        });
+        
+        // Also update lastMessage if this was the last one
+        const lastMsgRef = ref(rtdb, 'chats/' + chatId + '/lastMessage');
+        const lastSnap = await get(lastMsgRef);
+        if (lastSnap.exists() && lastSnap.val().senderId === currentSellerId) {
+            await update(lastMsgRef, { text: newText.trim() });
+        }
+        
+        editingMessageKey = null;
+        editingMessageChatId = null;
+        showNotification('Message updated', 'success');
+    } catch (error) {
+        console.error('Edit message error:', error);
+        showNotification('Failed to update message', 'error');
+    }
+};
+
+// ===== MESSAGE CONTEXT MENU (for own messages) =====
+window.showMessageMenu = function(chatId, messageKey, currentText, event) {
+    event.stopPropagation();
+    
+    // Remove any existing menu
+    const existing = document.getElementById('messageContextMenu');
+    if (existing) existing.remove();
+    
+    const menu = document.createElement('div');
+    menu.id = 'messageContextMenu';
+    menu.style.cssText = `
+        position: fixed;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        z-index: 9999;
+        min-width: 140px;
+        overflow: hidden;
+        border: 1px solid #eee;
+    `;
+    menu.innerHTML = `
+        <button onclick="editMessage('${chatId}', '${messageKey}', '${escapeHtml(currentText)}'); document.getElementById('messageContextMenu').remove();" 
+            style="display:block;width:100%;padding:0.75rem 1rem;border:none;background:none;text-align:left;cursor:pointer;font-size:0.9rem;color:#555;border-bottom:1px solid #eee;">
+            ✏️ Edit
+        </button>
+        <button onclick="deleteMessage('${chatId}', '${messageKey}'); document.getElementById('messageContextMenu').remove();" 
+            style="display:block;width:100%;padding:0.75rem 1rem;border:none;background:none;text-align:left;cursor:pointer;font-size:0.9rem;color:#e74c3c;">
+            🗑️ Delete
+        </button>
+    `;
+    
+    // Position near the click/tap
+    const x = event.clientX || (event.touches && event.touches[0].clientX) || 0;
+    const y = event.clientY || (event.touches && event.touches[0].clientY) || 0;
+    menu.style.left = Math.min(x, window.innerWidth - 160) + 'px';
+    menu.style.top = Math.min(y, window.innerHeight - 100) + 'px';
+    
+    document.body.appendChild(menu);
+    
+    // Close on click elsewhere
+    setTimeout(() => {
+        document.addEventListener('click', function closeMenu(e) {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        });
+    }, 10);
+};
 
 // Expose functions globally
 window.editProduct = editProduct;
