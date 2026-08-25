@@ -367,6 +367,32 @@
         }
     </style>
 <base target="_blank">
+    <style>
+        /* ===== MOBILE CHAT MODAL FIX: chatModalSidebar + chatModalMessages ONLY ===== */
+        @media (max-width: 768px) {
+            #chatModalSidebar {
+                width: 110px !important;
+                min-width: 110px !important;
+            }
+            #chatModalSidebar h4 {
+                font-size: 0.8rem !important;
+                padding: 0.75rem 0.5rem !important;
+            }
+            #chatModalMessages {
+                min-width: 0 !important;
+                padding: 0.75rem !important;
+                word-break: break-word !important;
+                overflow-wrap: anywhere !important;
+            }
+            /* Message bubbles inside chatModalMessages */
+            #chatModalMessages > div {
+                max-width: 90% !important;
+                font-size: 0.9rem !important;
+                padding: 0.6rem 0.8rem !important;
+            }
+        }
+    </style>
+<base target="_blank">
 </head>
 <body>
     <!-- Header - FIXED: Removed cart icon for sellers -->
