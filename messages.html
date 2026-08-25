@@ -461,6 +461,9 @@
 
         let currentUser = null;
         let activeChatId = null;
+        let activeSellerId = null;
+        let activeSellerName = null;
+        let editingMsgKey = null;
         let messagesListener = null;
 
         onAuthStateChanged(auth, (user) => {
