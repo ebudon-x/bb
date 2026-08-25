@@ -325,6 +325,7 @@ async function loadMessages(sellerId) {
 
                 const preview = document.createElement('div');
                 preview.className = 'chat-preview' + (isUnread ? ' unread' : '');
+                preview.setAttribute('data-chat-id', chat.id);
                 preview.onclick = () => openChat(chat.id, lastMsg.senderName || 'Customer', lastMsg.senderId);
                 preview.innerHTML = `
                     <div class="chat-avatar">${(lastMsg.senderName || 'U').charAt(0).toUpperCase()}</div>
@@ -442,15 +443,20 @@ function openChat(chatId, customerName, buyerId) {
     activeChatId = chatId;
     activeBuyerId = buyerId;
 
+    // MOBILE: show inline chat under the clicked preview
+    if (window.innerWidth <= 768) {
+        openMobileInlineChat(chatId, customerName, buyerId);
+        return;
+    }
+
+    // DESKTOP: keep existing modal behavior (unchanged)
     let chatModal = document.getElementById('sellerChatModal');
     if (!chatModal) {
         chatModal = document.createElement('div');
         chatModal.id = 'sellerChatModal';
         chatModal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;';
-        // ===== FIXED: Layout now matches buyer's messages.html =====
         chatModal.innerHTML = `
             <div style="background:white;width:90%;max-width:800px;height:85vh;border-radius:8px;display:flex;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-                <!-- Chat List Sidebar -->
                 <div style="width:280px;border-right:1px solid #eee;display:flex;flex-direction:column;background:#f8f9fa;">
                     <div style="padding:1rem;border-bottom:1px solid #eee;">
                         <h4 style="color:var(--primary-color);margin:0;">Conversations</h4>
@@ -459,7 +465,6 @@ function openChat(chatId, customerName, buyerId) {
                         <p style="text-align:center;color:#888;padding:1rem;">Loading...</p>
                     </div>
                 </div>
-                <!-- Chat Window -->
                 <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
                     <div style="padding:1rem;background:#f8f9fa;border-bottom:1px solid #eee;display:flex;align-items:center;gap:1rem;">
                         <div id="chatModalAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--secondary-color);color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;">C</div>
@@ -484,11 +489,8 @@ function openChat(chatId, customerName, buyerId) {
     document.getElementById('chatModalTitle').textContent = customerName || 'Customer';
     document.getElementById('chatModalAvatar').textContent = (customerName || 'C').charAt(0).toUpperCase();
 
-    // ===== FIXED: Listen to buyer's online status =====
-    if (onlineStatusListener) {
-        onlineStatusListener();
-        onlineStatusListener = null;
-    }
+    // Online status listener
+    if (onlineStatusListener) { onlineStatusListener(); onlineStatusListener = null; }
     if (buyerId) {
         const buyerOnlineRef = ref(rtdb, 'users/' + buyerId);
         onlineStatusListener = onValue(buyerOnlineRef, (snap) => {
@@ -507,32 +509,24 @@ function openChat(chatId, customerName, buyerId) {
         });
     }
 
-    // ===== FIXED: Load ALL messages (both sent and received) =====
+    // Messages listener
     const messagesRef = ref(rtdb, 'chats/' + chatId + '/messages');
     const container = document.getElementById('chatModalMessages');
     container.innerHTML = '<p style="text-align:center;color:#888;">Loading messages...</p>';
 
-    // Remove previous listener
-    if (chatMessagesListener) {
-        off(messagesRef, 'child_added', chatMessagesListener);
-    }
+    if (chatMessagesListener) { chatMessagesListener(); chatMessagesListener = null; }
 
-    // Listen for ALL messages in real-time
     chatMessagesListener = onChildAdded(messagesRef, (snapshot) => {
-        // Remove loading on first message
         if (container.querySelector('p')?.textContent === 'Loading messages...') {
             container.innerHTML = '';
         }
-
         const msg = snapshot.val();
         const isOwn = msg.senderId === currentSellerId;
-
         const div = document.createElement('div');
         div.style.cssText = 'max-width:70%;padding:0.75rem 1rem;border-radius:12px;font-size:0.95rem;line-height:1.4;word-wrap:break-word;' + 
             (isOwn 
                 ? 'background:var(--secondary-color);color:white;margin-left:auto;border-bottom-right-radius:4px;' 
                 : 'background:white;border:1px solid #e0e0e0;color:#333;border-bottom-left-radius:4px;');
-
         const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
         div.innerHTML = `
             <div>${escapeHtml(msg.text)}</div>
@@ -544,16 +538,165 @@ function openChat(chatId, customerName, buyerId) {
         container.scrollTop = container.scrollHeight;
     });
 
-    // Also load existing messages once
     onValue(messagesRef, (snapshot) => {
         if (!snapshot.exists()) {
             container.innerHTML = '<p style="text-align:center;color:#888;">No messages yet.</p>';
         }
     }, { onlyOnce: true });
 
-    // Mark as read
     update(ref(rtdb, 'chats/' + chatId + '/lastMessage'), { read: true }).catch(() => {});
 }
+
+// ===== MOBILE INLINE CHAT (no sidebar, appears under the clicked preview) =====
+
+function openMobileInlineChat(chatId, customerName, buyerId) {
+    // Remove any existing inline chat first
+    closeMobileInlineChat();
+
+    // Find the clicked preview by data-chat-id
+    const messagesList = document.getElementById('messagesList');
+    const previews = messagesList.querySelectorAll('.chat-preview');
+    let clickedPreview = null;
+    previews.forEach(p => {
+        if (p.getAttribute('data-chat-id') === chatId) {
+            clickedPreview = p;
+        }
+    });
+
+    // Create inline chat container
+    const inlineChat = document.createElement('div');
+    inlineChat.id = 'mobileInlineChat';
+    inlineChat.innerHTML = `
+        <div class="mobile-inline-chat">
+            <div class="mobile-inline-header">
+                <div class="mobile-inline-user">
+                    <div class="mobile-inline-avatar">${(customerName || 'C').charAt(0).toUpperCase()}</div>
+                    <div>
+                        <h4>${customerName || 'Customer'}</h4>
+                        <span id="mobileChatOnline">🟢 Online</span>
+                    </div>
+                </div>
+                <button class="mobile-inline-close" onclick="closeMobileInlineChat()">✕</button>
+            </div>
+            <div id="mobileChatMessages" class="mobile-inline-messages"></div>
+            <div class="mobile-inline-input">
+                <input type="text" id="mobileChatInput" placeholder="Type your reply..." onkeypress="if(event.key==='Enter') sendMobileReply()">
+                <button onclick="sendMobileReply()">Send</button>
+            </div>
+        </div>
+    `;
+
+    // Insert RIGHT AFTER the clicked preview
+    if (clickedPreview && clickedPreview.nextSibling) {
+        messagesList.insertBefore(inlineChat, clickedPreview.nextSibling);
+    } else if (clickedPreview) {
+        messagesList.appendChild(inlineChat);
+    } else {
+        messagesList.appendChild(inlineChat);
+    }
+
+    // Online status
+    if (onlineStatusListener) { onlineStatusListener(); onlineStatusListener = null; }
+    if (buyerId) {
+        const buyerOnlineRef = ref(rtdb, 'users/' + buyerId);
+        onlineStatusListener = onValue(buyerOnlineRef, (snap) => {
+            const data = snap.val();
+            const onlineEl = document.getElementById('mobileChatOnline');
+            if (onlineEl && data) {
+                if (data.isOnline) {
+                    onlineEl.innerHTML = '🟢 Online';
+                    onlineEl.style.color = '#27ae60';
+                } else {
+                    const lastSeen = data.lastSeen ? new Date(data.lastSeen).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+                    onlineEl.innerHTML = '⚪ Offline' + (lastSeen ? ' • ' + lastSeen : '');
+                    onlineEl.style.color = '#888';
+                }
+            }
+        });
+    }
+
+    // Load messages
+    const messagesRef = ref(rtdb, 'chats/' + chatId + '/messages');
+    const container = document.getElementById('mobileChatMessages');
+    container.innerHTML = '<p class="mobile-inline-loading">Loading messages...</p>';
+
+    if (chatMessagesListener) { chatMessagesListener(); chatMessagesListener = null; }
+
+    chatMessagesListener = onChildAdded(messagesRef, (snapshot) => {
+        const loadingEl = container.querySelector('.mobile-inline-loading');
+        if (loadingEl) loadingEl.remove();
+        if (!snapshot.exists()) return;
+
+        const msg = snapshot.val();
+        const isOwn = msg.senderId === currentSellerId;
+
+        const div = document.createElement('div');
+        div.className = 'mobile-inline-bubble ' + (isOwn ? 'sent' : 'received');
+        const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+        div.innerHTML = `
+            <div>${escapeHtml(msg.text)}</div>
+            <span class="mobile-inline-time">${time} • ${isOwn ? 'You' : (msg.senderName || 'Customer')}</span>
+        `;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    });
+
+    onValue(messagesRef, (snapshot) => {
+        if (!snapshot.exists()) {
+            container.innerHTML = '<p class="mobile-inline-loading">No messages yet.</p>';
+        }
+    }, { onlyOnce: true });
+
+    update(ref(rtdb, 'chats/' + chatId + '/lastMessage'), { read: true }).catch(() => {});
+
+    // Scroll the inline chat into view
+    setTimeout(() => {
+        inlineChat.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+}
+
+window.closeMobileInlineChat = function() {
+    const existing = document.getElementById('mobileInlineChat');
+    if (existing) existing.remove();
+
+    if (chatMessagesListener) {
+        chatMessagesListener();
+        chatMessagesListener = null;
+    }
+    if (onlineStatusListener) {
+        onlineStatusListener();
+        onlineStatusListener = null;
+    }
+    activeChatId = null;
+    activeBuyerId = null;
+};
+
+window.sendMobileReply = async function() {
+    const input = document.getElementById('mobileChatInput');
+    const text = input.value.trim();
+    const chatId = activeChatId;
+    if (!text || !chatId || !currentSellerId) return;
+
+    await push(ref(rtdb, 'chats/' + chatId + '/messages'), {
+        text: text,
+        senderId: currentSellerId,
+        senderName: currentUser?.displayName || 'Seller',
+        senderRole: 'seller',
+        timestamp: Date.now(),
+        read: false
+    });
+
+    await set(ref(rtdb, 'chats/' + chatId + '/lastMessage'), {
+        text: text,
+        senderId: currentSellerId,
+        senderName: currentUser?.displayName || 'Seller',
+        senderRole: 'seller',
+        timestamp: Date.now(),
+        read: false
+    });
+
+    input.value = '';
+};
 
 window.closeChatModal = function() {
     const modal = document.getElementById('sellerChatModal');
