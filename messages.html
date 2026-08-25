@@ -252,7 +252,32 @@
                 flex-shrink: 0;
             }
         }
+        #msgContextMenu {
+            position: fixed;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 9999;
+            min-width: 140px;
+            overflow: hidden;
+            border: 1px solid #eee;
+        }
+        #msgContextMenu button {
+            display: block; width: 100%; padding: 0.75rem 1rem;
+            border: none; background: none; text-align: left;
+            cursor: pointer; font-size: 0.9rem; color: #555;
+            border-bottom: 1px solid #eee;
+        }
+        #msgContextMenu button:last-child { border-bottom: none; color: #e74c3c; }
+        #msgContextMenu button:hover { background: #f8f9fa; }
+        .msg.sent { cursor: pointer; position: relative; }
+        .chat-delete-btn {
+            background: none; border: none; color: #e74c3c;
+            font-size: 1rem; cursor: pointer; padding: 0.25rem 0.5rem; margin-left: auto;
+        }
+        .msg-edited { font-size: 0.7rem; opacity: 0.6; margin-left: 0.3rem; }
     </style>
+<base target="_blank">
 </head>
 <body>
     <!-- Header -->
@@ -426,7 +451,7 @@
     <script src="nav.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getDatabase, ref, onValue, push, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        import { getDatabase, ref, onValue, push, set, update, remove, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
         import { firebaseConfig } from './firebase-config.js';
 
@@ -476,12 +501,31 @@
                             ? new Date(lastMsg.timestamp).toLocaleDateString() 
                             : '';
 
-                    // Always show the SELLER's name, not the last sender's name
-                    const sellerName = chat.meta?.sellerName || lastMsg.senderName || 'Seller';
+                        // ===== FIX: Get SELLER name (the OTHER person), not last sender =====
+                        const ids = child.key.split('_');
+                        const sellerId = ids.find(id => id !== userId) || '';
+                        let sellerName = 'Seller';
+
+                        if (chat.participants && chat.participants[sellerId]) {
+                            sellerName = chat.participants[sellerId].name || 'Seller';
+                        } else if (lastMsg.senderId !== userId && lastMsg.senderName) {
+                            sellerName = lastMsg.senderName;
+                        } else {
+                            const msgs = chat.messages || {};
+                            for (const key in msgs) {
+                                if (msgs[key].senderId === sellerId && msgs[key].senderName) {
+                                    sellerName = msgs[key].senderName;
+                                    break;
+                                }
+                            }
+                        }
+                        // ============================================
 
                         const div = document.createElement('div');
                         div.className = 'chat-item' + (isUnread ? ' unread' : '');
                         div.setAttribute('data-chat-id', child.key);
+                        div.setAttribute('data-seller-id', sellerId);
+                        div.setAttribute('data-seller-name', sellerName);
                         div.innerHTML = `
                             <div class="chat-item-avatar">${sellerName.charAt(0).toUpperCase()}</div>
                             <div class="chat-item-info">
@@ -493,7 +537,7 @@
                                 ${isUnread ? '<span class="unread-badge">!</span>' : ''}
                             </div>
                         `;
-                        div.onclick = () => openChat(child.key, sellerName);
+                        div.onclick = () => openChat(child.key, sellerName, sellerId);
                         chatList.appendChild(div);
                     }
                 });
@@ -510,63 +554,56 @@
             });
         }
 
-        function openChat(chatId, sellerName) {
+        function openChat(chatId, sellerName, sellerId) {
             activeChatId = chatId;
+            activeSellerId = sellerId;
+            activeSellerName = sellerName;
+            editingMsgKey = null;
 
-            // Update UI
             document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
             document.querySelector(`[data-chat-id="${chatId}"]`)?.classList.add('active');
 
             document.getElementById('chatHeader').innerHTML = `
                 <div class="avatar">${sellerName.charAt(0).toUpperCase()}</div>
-                <div>
+                <div style="flex:1;">
                     <h4>${sellerName}</h4>
                     <span class="online-status">🟢 Online</span>
                 </div>
+                <button class="chat-delete-btn" onclick="deleteChat('${chatId}')" title="Delete Chat">🗑️</button>
             `;
             document.getElementById('chatInputArea').style.display = 'flex';
+            const input = document.getElementById('messageInput');
+            input.value = '';
+            input.placeholder = 'Type your message...';
+            input.removeAttribute('data-editing');
+            input.removeAttribute('data-msg-key');
 
-            // Unsubscribe from previous listener
-            if (messagesListener) {
-                // off() is not imported, just let new listener override
-            }
-
-            // Listen to messages
             const messagesRef = ref(db, 'chats/' + chatId + '/messages');
             onValue(messagesRef, (snapshot) => {
                 const container = document.getElementById('chatMessages');
                 container.innerHTML = '';
 
                 if (!snapshot.exists()) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <p>No messages yet. Say hello!</p>
-                        </div>
-                    `;
+                    container.innerHTML = `<div class="empty-state"><p>No messages yet. Say hello!</p></div>`;
                     return;
                 }
 
-                const messages = [];
                 snapshot.forEach((child) => {
-                    messages.push(child.val());
-                });
+                    const msg = child.val();
+                    const msgKey = child.key;
+                    const isOwn = msg.senderId === currentUser.uid;
 
-                messages.forEach((msg) => {
                     const div = document.createElement('div');
-                    div.className = 'msg ' + (msg.senderId === currentUser.uid ? 'sent' : 'received');
-                    const time = msg.timestamp 
-                        ? new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) 
-                        : '';
-                    div.innerHTML = `
-                        ${escapeHtml(msg.text)}
-                        <span class="msg-time">${time}</span>
-                    `;
+                    div.className = 'msg ' + (isOwn ? 'sent' : 'received');
+                    if (isOwn) div.addEventListener('click', (e) => showMsgMenu(chatId, msgKey, msg.text, e));
+
+                    const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+                    const editedMark = msg.edited ? '<span class="msg-edited">(edited)</span>' : '';
+                    div.innerHTML = `${escapeHtml(msg.text)}${editedMark}<span class="msg-time">${time}</span>`;
                     container.appendChild(div);
                 });
 
                 container.scrollTop = container.scrollHeight;
-
-                // Mark messages as read
                 markMessagesAsRead(chatId);
             });
         }
@@ -581,26 +618,78 @@
             const text = input.value.trim();
             if (!text || !activeChatId || !currentUser) return;
 
-            const messagesRef = ref(db, 'chats/' + activeChatId + '/messages');
-            await push(messagesRef, {
-                text: text,
-                senderId: currentUser.uid,
-                senderName: currentUser.displayName || 'Buyer',
-                senderRole: 'buyer',
-                timestamp: Date.now(),
-                read: false
-            });
+            const isEditing = input.getAttribute('data-editing') === 'true';
+            const editKey = input.getAttribute('data-msg-key');
 
+            if (isEditing && editKey) {
+                await update(ref(db, 'chats/' + activeChatId + '/messages/' + editKey), {
+                    text: text, edited: true, editedAt: Date.now()
+                });
+                const lastSnap = await get(ref(db, 'chats/' + activeChatId + '/lastMessage'));
+                if (lastSnap.exists() && lastSnap.val().senderId === currentUser.uid) {
+                    await update(ref(db, 'chats/' + activeChatId + '/lastMessage'), { text: text });
+                }
+                input.value = ''; input.placeholder = 'Type your message...';
+                input.removeAttribute('data-editing'); input.removeAttribute('data-msg-key');
+                editingMsgKey = null; return;
+            }
+
+            await push(ref(db, 'chats/' + activeChatId + '/messages'), {
+                text: text, senderId: currentUser.uid, senderName: currentUser.displayName || 'Buyer',
+                senderRole: 'buyer', timestamp: Date.now(), read: false
+            });
             await set(ref(db, 'chats/' + activeChatId + '/lastMessage'), {
-                text: text,
-                senderId: currentUser.uid,
-                senderName: currentUser.displayName || 'Buyer',
-                senderRole: 'buyer',
-                timestamp: Date.now(),
-                read: false
+                text: text, senderId: currentUser.uid, senderName: currentUser.displayName || 'Buyer',
+                senderRole: 'buyer', timestamp: Date.now(), read: false
             });
-
             input.value = '';
+        };
+
+        window.deleteChat = async function(chatId) {
+            if (!confirm('Delete this entire conversation? This cannot be undone.')) return;
+            try {
+                await remove(ref(db, 'chats/' + chatId));
+                activeChatId = null;
+                document.getElementById('chatMessages').innerHTML = `<div class="empty-state"><h3>No conversation selected</h3><p>Select a chat from the list</p></div>`;
+                document.getElementById('chatHeader').innerHTML = `<div class="avatar">💬</div><div><h4>Select a conversation</h4><span class="online-status">Choose from the list to start chatting</span></div>`;
+                document.getElementById('chatInputArea').style.display = 'none';
+            } catch (err) { console.error(err); alert('Failed to delete chat'); }
+        };
+
+        window.deleteMessage = async function(chatId, msgKey) {
+            if (!confirm('Delete this message?')) return;
+            try { await remove(ref(db, 'chats/' + chatId + '/messages/' + msgKey)); }
+            catch (err) { console.error(err); alert('Failed to delete message'); }
+        };
+
+        window.editMessage = function(chatId, msgKey, currentText) {
+            editingMsgKey = msgKey;
+            const input = document.getElementById('messageInput');
+            input.value = currentText;
+            input.setAttribute('data-editing', 'true');
+            input.setAttribute('data-msg-key', msgKey);
+            input.placeholder = 'Editing message...';
+            input.focus();
+        };
+
+        window.showMsgMenu = function(chatId, msgKey, currentText, event) {
+            event.stopPropagation();
+            const existing = document.getElementById('msgContextMenu');
+            if (existing) existing.remove();
+            const menu = document.createElement('div');
+            menu.id = 'msgContextMenu';
+            const safeText = escapeHtml(currentText).replace(/'/g, "\\'");
+            menu.innerHTML = `<button onclick="editMessage('${chatId}', '${msgKey}', '${safeText}'); document.getElementById('msgContextMenu').remove();">✏️ Edit</button><button onclick="deleteMessage('${chatId}', '${msgKey}'); document.getElementById('msgContextMenu').remove();">🗑️ Delete</button>`;
+            const x = event.clientX || 0;
+            const y = event.clientY || 0;
+            menu.style.left = Math.min(x, window.innerWidth - 160) + 'px';
+            menu.style.top = Math.min(y, window.innerHeight - 100) + 'px';
+            document.body.appendChild(menu);
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu(e) {
+                    if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', closeMenu); }
+                });
+            }, 10);
         };
 
         function escapeHtml(text) {
