@@ -582,7 +582,9 @@ function openChat(chatId, customerName, buyerId) {
 function openMobileInlineChat(chatId, customerName, buyerId) {
     // Remove any existing inline chat first
     closeMobileInlineChat();
-
+        // Restore IDs after closeMobileInlineChat() nulls them
+    activeChatId = chatId;
+    activeBuyerId = buyerId;
     // Find the clicked preview by data-chat-id
     const messagesList = document.getElementById('messagesList');
     const previews = messagesList.querySelectorAll('.chat-preview');
