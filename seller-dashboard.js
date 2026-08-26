@@ -319,16 +319,27 @@ async function loadMessages(sellerId) {
             // Sort by last message time
             chats.sort((a, b) => (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0));
 
+                    // Preserve mobile inline chat if open
+            const existingInline = document.getElementById('mobileInlineChat');
+            let preservedInline = null;
+            let insertAfterId = null;
+            if (existingInline && window.innerWidth <= 768) {
+                preservedInline = existingInline;
+                const prev = existingInline.previousElementSibling;
+                if (prev && prev.classList.contains('chat-preview')) {
+                    insertAfterId = prev.getAttribute('data-chat-id');
+                }
+                preservedInline.remove();
+            }
+
             messagesList.innerHTML = '';
+            let insertedAfter = false;
             chats.forEach(chat => {
                 const lastMsg = chat.lastMessage || {};
                 
-                // ===== FIX: Get the OTHER person's name, not whoever sent last =====
-                // Chat ID format: buyerId_sellerId or sellerId_buyerId
                 const ids = chat.id.split('_');
                 const buyerId = ids.find(id => id !== sellerId) || '';
                 
-                // Get buyer name from participants, messages, or lastMessage
                 let buyerName = 'Customer';
                 let buyerDisplayName = 'Customer';
                 
@@ -337,7 +348,6 @@ async function loadMessages(sellerId) {
                 } else if (lastMsg.senderId !== sellerId && lastMsg.senderName) {
                     buyerName = lastMsg.senderName;
                 } else {
-                    // Look through messages to find buyer's name
                     const msgs = chat.messages || {};
                     for (const key in msgs) {
                         if (msgs[key].senderId === buyerId && msgs[key].senderName) {
@@ -347,7 +357,6 @@ async function loadMessages(sellerId) {
                     }
                 }
                 buyerDisplayName = buyerName;
-                // ============================================
 
                 const isUnread = !lastMsg.read && lastMsg.senderId !== sellerId;
                 const time = lastMsg.timestamp ? new Date(lastMsg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
@@ -369,7 +378,18 @@ async function loadMessages(sellerId) {
                     </div>
                 `;
                 messagesList.appendChild(preview);
+
+                // Re-insert inline chat after its parent preview
+                if (preservedInline && insertAfterId === chat.id) {
+                    messagesList.appendChild(preservedInline);
+                    insertedAfter = true;
+                }
             });
+
+            // Fallback: append at end if preview wasn't found
+            if (preservedInline && !insertedAfter) {
+                messagesList.appendChild(preservedInline);
+            }    
         });
     } catch (error) {
         console.error('Messages error:', error);
